@@ -15,6 +15,7 @@ import {
 import { db } from "./firabseConfig/firebaseConfig";
 import Images from "./albumImages";
 import Input from "./imageInput";
+import Notifications from "./notification";
 
 export default function App() {
   const [showForm, setShowForm] = useState(false);
@@ -26,9 +27,31 @@ export default function App() {
   const [updateData, setupdateData] = useState("");
   const [search, setSearch] = useState("");
   const [filteredImages, setFilteredImages] = useState([]);
+  const [notify, setNotify] = useState({
+    show: false,
+    success: false,
+    message: "",
+  });
 
   const handleAdd = async (albums) => {
-    await addDoc(collection(db, "albums"), albums);
+    try {
+      await addDoc(collection(db, "albums"), albums);
+      setNotify({
+        show: true,
+        success: true,
+        message: "Album added successfully!",
+      });
+    } catch (error) {
+      setNotify({
+        show: true,
+        success: false,
+        message: "Failed to add album.",
+      });
+    }
+
+    setTimeout(() => {
+      setNotify({ show: false, success: false, message: "" });
+    }, 3000);
   };
 
   useEffect(() => {
@@ -93,28 +116,82 @@ export default function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (updateData) {
-      await updateDoc(doc(db, "images", updateData.id), InputValue);
-    } else if (InputValue.name && InputValue.url) {
-      const imageData = {
-        ...InputValue,
-        albumId: selectedAlbum.id,
-      };
-      await addDoc(collection(db, "images"), imageData);
+    try {
+      if (updateData) {
+        await updateDoc(doc(db, "images", updateData.id), InputValue);
+        setNotify({
+          show: true,
+          success: true,
+          message: "Image updated successfully!",
+        });
+      } else if (InputValue.name && InputValue.url) {
+        const imageData = {
+          ...InputValue,
+          albumId: selectedAlbum.id,
+        };
+        await addDoc(collection(db, "images"), imageData);
+        setNotify({
+          show: true,
+          success: true,
+          message: "Image added successfully!",
+        });
+      }
+    } catch (error) {
+      setNotify({
+        show: true,
+        success: false,
+        message: "Failed to add or update image.",
+      });
     }
 
     setInputValue({ name: "", url: "" });
     setupdateData(null);
     setInputForm(false);
+
+    setTimeout(() => {
+      setNotify({ show: false, success: false, message: "" });
+    }, 3000);
   };
 
-  const handleEditImage = async () => {
-    await updateDoc(doc(db, "images"));
-  };
+  const handleEditImage = async (imageData) => {
+    try {
+      await updateDoc(doc(db, "images", imageData.id), imageData);
+      setNotify({
+        show: true,
+        success: true,
+        message: "Image updated successfully!",
+      });
+    } catch (error) {
+      setNotify({
+        show: true,
+        success: false,
+        message: "Failed to update image.",
+      });
+    }
 
+    setTimeout(() => {
+      setNotify({ show: false, success: false, message: "" });
+    }, 3000);
+  };
   const handleDeleteImage = async (id) => {
-    await deleteDoc(doc(db, "images", id));
+    try {
+      await deleteDoc(doc(db, "images", id));
+      setNotify({
+        show: true,
+        success: true,
+        message: "Image deleted successfully!",
+      });
+    } catch (error) {
+      setNotify({
+        show: true,
+        success: false,
+        message: "Failed to delete image.",
+      });
+    }
+
+    setTimeout(() => {
+      setNotify({ show: false, success: false, message: "" });
+    }, 3000);
   };
 
   useEffect(() => {
@@ -134,6 +211,9 @@ export default function App() {
           handleSubmit={handleSubmit}
           handleChange={handleChange}
         />
+      )}
+      {notify.show && (
+        <Notifications success={notify.success} message={notify.message} />
       )}
       {!selectedAlbum ? (
         <Album
